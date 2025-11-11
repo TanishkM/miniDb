@@ -24,6 +24,7 @@ public class Parser {
         if (t.type == Token.Type.KEYWORD && t.text.equals("CREATE")) {
             Token nxt = tk.next();
             if (nxt.text.equals("TABLE")) return parseCreateTable(tk);
+            if (nxt.text.equals("INDEX")) return parseCreateIndex(tk);
         }
         if (t.type == Token.Type.KEYWORD && t.text.equals("INSERT")) {
             return parseInsert(tk);
@@ -188,6 +189,18 @@ public class Parser {
             throw new RuntimeException("Expected ';' or end of statement");
         }
         return new DeleteCommand(catalog,tableName.text,whereCol.text,whereVal.text);
+    }
+    private Command parseCreateIndex(SimpleTokenizer tk) {
+        Token indexName = tk.next(); // optional index name, can ignore
+        expectKeyword(tk, "ON");
+        Token table = tk.next();
+        Token lpar = tk.next();
+        if (lpar.type != Token.Type.LPAREN) throw new RuntimeException("Expected '('");
+        Token col = tk.next();
+        if (col.type != Token.Type.IDENT) throw new RuntimeException("Column name expected");
+        Token rpar = tk.next();
+        if (rpar.type != Token.Type.RPAREN) throw new RuntimeException("Expected ')'");
+        return new CreateIndexCommand(catalog, table.text, col.text);
     }
 
 

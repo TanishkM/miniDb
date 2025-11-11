@@ -8,7 +8,7 @@ public class SimpleTokenizer {
     private int pos = 0;
     private static final Set<String> KEYWORDS = Set.of(
             "CREATE", "TABLE", "DELETE", "INSERT", "INTO", "VALUES", "SELECT",
-            "FROM", "INT", "STRING","UPDATE","SET","WHERE"
+            "FROM", "INT", "STRING","UPDATE","SET","WHERE","INDEX","ON"
     );
 
     public SimpleTokenizer(String input) {

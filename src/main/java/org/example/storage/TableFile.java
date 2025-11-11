@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class TableFile {
     private final File file;
-    private final PageFile pf;
+    public final PageFile pf;
 
     public TableFile(String name) throws IOException {
         this.file = new File("table_" + name + ".dat");
