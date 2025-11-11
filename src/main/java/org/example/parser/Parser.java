@@ -4,14 +4,12 @@ package org.example.parser;
 
 import org.example.catalog.Catalog;
 import org.example.catalog.TableSchema;
-import org.example.commands.Command;
-import org.example.commands.CreateTableCommand;
-import org.example.commands.InsertCommand;
-import org.example.commands.SelectCommand;
+import org.example.commands.*;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Parser {
     private final Catalog catalog;
@@ -33,6 +31,10 @@ public class Parser {
         if (t.type == Token.Type.KEYWORD && t.text.equals("SELECT")) {
             return parseSelect(tk);
         }
+        if (t.type == Token.Type.KEYWORD && t.text.equals("UPDATE")) {
+            return parseUpdate(tk);
+        }
+
         throw new RuntimeException("Unsupported command");
     }
 
@@ -111,6 +113,38 @@ public class Parser {
         if (!from.text.equals("FROM")) throw new RuntimeException("Expected FROM");
         Token tbl = tk.next();
         return new SelectCommand(catalog, tbl.text);
+    }
+    private Command parseUpdate(SimpleTokenizer tk){
+        Token table = tk.next();
+        Token tableName = tk.next();
+        if(tableName.type != Token.Type.IDENT) throw new RuntimeException("Table name expected");
+        expectKeyword(tk,"SET");
+
+        Map<String,String> updates = new LinkedHashMap<>();
+
+        while(true){
+            Token col = tk.next();
+            if(col.type != Token.Type.IDENT) throw new RuntimeException("Column name expected");
+            Token eq = tk.next();
+            if(eq.type != Token.Type.EQUAL) throw new RuntimeException("Expected '='");
+            Token val = tk.next();
+            if(val.type != Token.Type.STRING && val.type != Token.Type.NUMBER) throw new RuntimeException("Value expected");
+            updates.put(col.text,val.text);
+            Token nxt = tk.next();
+            if(nxt.type == Token.Type.COMMA) continue;
+            if(nxt.type == Token.Type.KEYWORD && nxt.text.equals("WHERE")) break;
+        }
+
+        Token whereCol = tk.next();
+        Token eq = tk.next();
+        if(!eq.text.equals("=")) throw new RuntimeException("Expected '='");
+        Token whereVal = tk.next();
+
+        Token semi = tk.next();
+        if (semi.type != Token.Type.SEMI && semi.type != Token.Type.EOF) {
+            throw new RuntimeException("Expected ';' or end of statement");
+        }
+        return new UpdateCommand(catalog,tableName.text,updates,whereCol.text,whereVal.text);
     }
     private void expectKeyword(SimpleTokenizer tk, String keyword) {
         Token t = tk.next();

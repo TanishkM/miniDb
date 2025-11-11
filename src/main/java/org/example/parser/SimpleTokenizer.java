@@ -8,7 +8,7 @@ public class SimpleTokenizer {
     private int pos = 0;
     private static final Set<String> KEYWORDS = Set.of(
             "CREATE", "TABLE", "DELETE", "INSERT", "INTO", "VALUES", "SELECT",
-            "FROM", "INT", "STRING"
+            "FROM", "INT", "STRING","UPDATE","SET","WHERE"
     );
 
     public SimpleTokenizer(String input) {
@@ -41,7 +41,11 @@ public class SimpleTokenizer {
         if (c == '*') {
             pos++;
             return new Token(Token.Type.STAR, "*");
-        } // 👈 add this line
+        }
+        if(c == '='){
+            pos++;
+            return new Token(Token.Type.EQUAL, "=");
+        }
         if (c == '"') return string();
 
         // Identifiers or keywords
@@ -57,6 +61,7 @@ public class SimpleTokenizer {
             String num = readNumber();
             return new Token(Token.Type.NUMBER, num);
         }
+
         if (pos >= input.length()) {
             return new Token(Token.Type.EOF, "");
         }

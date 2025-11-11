@@ -4,7 +4,7 @@ public class Token {
     public enum Type {
         IDENT, KEYWORD, NUMBER, STRING,
         LPAREN, RPAREN, COMMA, SEMI,STAR,
-        EOF
+        EOF,EQUAL
     }
 
     public final Type type;

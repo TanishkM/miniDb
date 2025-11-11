@@ -1,8 +1,12 @@
 package org.example.storage;
 
-import java.io.*;
-import java.nio.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class TableFile {
     private final File file;
@@ -16,8 +20,7 @@ public class TableFile {
 
     public void insert(Object[] fields) throws IOException {
         byte[] rec = Record.serialize(fields);
-        // append simple: find page with space, else new page
-        for (int pid=0; pid<pf.numPages(); pid++) {
+        for (int pid = 0; pid < pf.numPages(); pid++) {
             Page p = pf.readPage(pid);
             ByteBuffer bb = ByteBuffer.wrap(p.getData());
             int used = bb.getInt(0);
@@ -45,7 +48,7 @@ public class TableFile {
 
     public List<Object[]> readAll() throws IOException {
         List<Object[]> out = new ArrayList<>();
-        for (int pid=0; pid<pf.numPages(); pid++) {
+        for (int pid = 0; pid < pf.numPages(); pid++) {
             Page p = pf.readPage(pid);
             ByteBuffer bb = ByteBuffer.wrap(p.getData());
             int used = bb.getInt(0);
@@ -61,5 +64,64 @@ public class TableFile {
         return out;
     }
 
-    public void close() throws IOException { pf.close(); }
+    public int update(String whereCol, String whereVal,
+                      Map<String, String> updates,
+                      List<String> schemaCols,
+                      Map<String, String> colTypes) throws IOException {
+        int updated = 0;
+        int whereIdx = schemaCols.indexOf(whereCol);
+        if (whereIdx < 0) throw new RuntimeException("No such column: " + whereCol);
+
+        for (int pid = 0; pid < pf.numPages(); pid++) {
+            Page p = pf.readPage(pid);
+            ByteBuffer bb = ByteBuffer.wrap(p.getData());
+            int used = bb.getInt(0);
+            if (used < 8) continue;
+
+            int pos = 4;
+
+            while (pos < used) {
+                int recLen = bb.getInt(pos);
+                pos += 4;
+                byte[] rec = new byte[recLen];
+                bb.position(pos);
+                bb.get(rec);
+                pos += recLen;
+                Object[] fields = Record.deserialize(rec);
+                Object val = fields[whereIdx];
+                if (Objects.equals(val.toString(), whereVal)) {
+
+                    for (Map.Entry<String, String> e : updates.entrySet()) {
+                        int idx = schemaCols.indexOf(e.getKey());
+                        if (idx == -1) throw new RuntimeException("No such column: " + e.getKey());
+                        String type = colTypes.get(e.getKey());
+                        String newVal = e.getValue();
+                        if (type.equalsIgnoreCase("int")) {
+                            fields[idx] = Integer.parseInt(newVal);
+                        } else {
+                            fields[idx] = newVal;
+                        }
+                    }
+                    byte[] newRec = Record.serialize(fields);
+                    if (newRec.length <= recLen) {
+                        bb.position(pos - recLen);
+                        bb.put(newRec);
+                        if (newRec.length < recLen) {
+                            bb.put(new byte[recLen - newRec.length]);
+                        }
+                        pf.writePage(p);
+                    } else {
+                        insert(fields);
+                    }
+                    updated++;
+                }
+            }
+        }
+
+        return updated;
+    }
+
+    public void close() throws IOException {
+        pf.close();
+    }
 }
