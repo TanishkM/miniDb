@@ -34,8 +34,25 @@ public class Parser {
         if (t.type == Token.Type.KEYWORD && t.text.equals("UPDATE")) {
             return parseUpdate(tk);
         }
+        if (t.type == Token.Type.KEYWORD && t.text.equals("DELETE")) {
+            return parseDelete(tk);
+        }
 
         throw new RuntimeException("Unsupported command");
+    }
+    private void expectKeyword(SimpleTokenizer tk, String keyword) {
+        Token t = tk.next();
+        if (t.type != Token.Type.KEYWORD || !t.text.equalsIgnoreCase(keyword)) {
+            throw new RuntimeException("Expected keyword '" + keyword + "' but got: " + t.text);
+        }
+    }
+
+    // Utility method to ensure the next token is a specific symbol (like '(' or ';')
+    private void expect(SimpleTokenizer tk, Token.Type type) {
+        Token t = tk.next();
+        if (t.type != type) {
+            throw new RuntimeException("Expected " + type + " but got: " + t.text);
+        }
     }
 
     private Command parseCreateTable(SimpleTokenizer tk) {
@@ -133,9 +150,13 @@ public class Parser {
             Token nxt = tk.next();
             if(nxt.type == Token.Type.COMMA) continue;
             if(nxt.type == Token.Type.KEYWORD && nxt.text.equals("WHERE")) break;
+            if (nxt.type == Token.Type.SEMI || nxt.type == Token.Type.EOF) break;
         }
 
         Token whereCol = tk.next();
+        if (whereCol.type == Token.Type.SEMI || whereCol.type == Token.Type.EOF) {
+            return new UpdateCommand(catalog,tableName.text,updates,"","");
+        }
         Token eq = tk.next();
         if(!eq.text.equals("=")) throw new RuntimeException("Expected '='");
         Token whereVal = tk.next();
@@ -146,19 +167,28 @@ public class Parser {
         }
         return new UpdateCommand(catalog,tableName.text,updates,whereCol.text,whereVal.text);
     }
-    private void expectKeyword(SimpleTokenizer tk, String keyword) {
-        Token t = tk.next();
-        if (t.type != Token.Type.KEYWORD || !t.text.equalsIgnoreCase(keyword)) {
-            throw new RuntimeException("Expected keyword '" + keyword + "' but got: " + t.text);
+    private Command parseDelete(SimpleTokenizer tk){
+        expectKeyword(tk,"FROM");
+        Token tableName = tk.next();
+        if(tableName.type != Token.Type.IDENT) throw new RuntimeException("Table name expected");
+
+        Token whereToken = tk.next();
+        if (whereToken.type == Token.Type.SEMI || whereToken.type == Token.Type.EOF) {
+            return new DeleteCommand(catalog,tableName.text,"","");
         }
+        if(!whereToken.text.equals("WHERE")) throw new RuntimeException("Expected WHERE");
+
+        Token whereCol = tk.next();
+        Token eq = tk.next();
+        if(!eq.text.equals("=")) throw new RuntimeException("Expected '='");
+        Token whereVal = tk.next();
+
+        Token semi = tk.next();
+        if (semi.type != Token.Type.SEMI && semi.type != Token.Type.EOF) {
+            throw new RuntimeException("Expected ';' or end of statement");
+        }
+        return new DeleteCommand(catalog,tableName.text,whereCol.text,whereVal.text);
     }
 
-    // Utility method to ensure the next token is a specific symbol (like '(' or ';')
-    private void expect(SimpleTokenizer tk, Token.Type type) {
-        Token t = tk.next();
-        if (t.type != type) {
-            throw new RuntimeException("Expected " + type + " but got: " + t.text);
-        }
-    }
 
 }
