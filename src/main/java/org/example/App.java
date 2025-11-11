@@ -29,7 +29,7 @@ public class App {
                 } catch (Exception e) {
                     System.out.println("Unable to clear screen: " + e.getMessage());
                 }
-                for (int i = 0; i < 50; i++) System.out.println();
+                for (int i = 0; i < 100; i++) System.out.println();
                 continue;
             }
             if (line.isEmpty()) continue;
